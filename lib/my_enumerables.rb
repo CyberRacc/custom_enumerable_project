@@ -82,6 +82,41 @@ module Enumerable
     end
     true
   end
+
+  def my_count
+    block_matching_elems = 0
+    i = 0
+    return size unless block_given?
+
+    while i < size
+      block_matching_elems += 1 if yield(self[i])
+      i += 1
+    end
+
+    block_matching_elems
+  end
+
+  def my_map
+    # If no block is provided, my_map will return an enumerator, it will not perform any transformations.
+    return enum_for(:my_map) unless block_given?
+
+    transformed_array = []
+
+    # Iterates over the elements, performing whatever the block has defined.
+    i = 0
+    while i < size
+      transformed_array << yield(self[i])
+      i += 1
+    end
+    transformed_array
+  end
+
+  # Inject is the same as reduce, it will reduce elements down to a single value.
+  def my_inject
+    initial_value = 0
+    i = 0
+    yield(self[i]) while i < size
+  end
 end
 
 # You will first have to define my_each
