@@ -1,7 +1,3 @@
-# Explanation
-
-This readme file contains all of the steps and notes I took while working on this project. I am very proud of myself for being able to do this, and these are here for those who it may help.
-
 # My Each Method
 
 I must create my own implementation of the `each` method in the `Array` class.
@@ -536,3 +532,185 @@ The `enum_for` part is completely unecessary for the test and I don't fully unde
         ['a', 'b', 'c'].
 ```
 
+The `inject` method is also known as the `reduce` method.
+
+`inject` is used to accumulate a value across the elements of a collection by applying a binary operation specified by a block or a symbol. It transforms data in a collection into a single value.
+
+At a basic level, `inject` takes two arguments: an initial accumulator value and a block. The block takes two parameters: the accumulator (the accumulated value so far) and an element from the collection. The block's return value becomes the new accumulator value for the next iteration. This process repeats for each element in the collection.
+
+If `inject` is called without an initial value, the first element of the collection is used as the initial accumulator, and iteration starts with the second element.
+
+`inject` can also take a symbol representing a binary operation (like `:+`, `:*`, etc.) instead of a block. In this form, Ruby applies the specified operation to accumulate a value across the elements of the collection.
+
+**Steps to implement**:
+1. Decide how to handle both the initial value and the case where no initial value is given.
+2. Determine how to apply a block or a symbol to accumulate a value across the collection.
+3. Ensure it works with both ranges and arrays, as well as with other enumerable objects.
+
+Another example is to use a block to calculate the product of all numbers in an array:
+
+```rb
+[2, 3, 4].inject(1) { |product, n| product * n }
+# => 24
+```
+- This starts with an initial value of `1`.
+- The block multiplies the accumulator (`product`) by each element (`n`), so the calculation is `1 * 2 * 3 * 4`, resulting in `24`.
+
+May need to use the `splat` thing for this one.
+
+**What is the splat operator?**
+- The splat operator allows you to handle an undefined number of arguments.
+- When defining a method, using a splat operator before a parameter name allows that parameter to absorb any number of arguments passed to the method. These arguments are gathered into an array.
+```rb
+def example_method(*args)
+  args.each { |arg| puts arg }
+end
+
+example_method(1, 2, 3, 4)
+# Outputs:
+# 1
+# 2
+# 3
+# 4
+```
+- In this example, `*args` captures all arguments passed to `example_method` and stores them in an array named `args`
+- The splat operator can also *explode* an array into a list of arguments when calling a method. This is useful when you have an array and want to pass its elements as individual arguments to a method.
+```rb
+def sum(a, b, c)
+  a + b + c
+end
+
+numbers = [1, 2, 3]
+puts sum(*numbers)
+# Outputs: 6
+```
+- For the `my_inject` method, the splat operator would allow accepting a variable number of arguments. This allows me to differentiate between no argumenst being passed and a `nil` argument being explicitly passed.
+```rb
+def my_inject(*args)
+  # args is an array of arguments
+  initial_value = args[0] || default_value # You'd define default_value based on your logic
+  # Your method logic here...
+end
+```
+
+**Pseudocode**:
+```rb
+def my_inject(*args)
+  # Determine if initial value is provided and set up accumulator and start index accordingly
+
+  # Iterate over the collection, starting from the appropriate index
+    # Update accumulator by applying block or operation to accumulator and current element
+
+  # Return the final accumulator value
+end
+```
+
+First attempt:
+```rb
+  def my_inject(*args)
+    initial_value = args[0]
+
+    i = 0
+    while i < size
+    initial_value += self[i]
+      i += 1
+    end
+    
+    initial_value
+  end
+```
+
+Although this passes two tests out of three, it's not correct, here's how to fix it:
+- Need to determine if `args[0]` is actually an initial value or potentially an operation symbol (`:+`, `:*`, etc) when a block is not given.
+- Start the iteration from the second value if no initial value is provided (using the first element as the initial value in that case).
+- If `args.length` is 2, there's likely both an initial value and an operation symbol.
+- If `args.length` is 1, there's either an initial value or an operation symbol, the presence of a block should help determine this. If a block is given, `args[0]` is an initial value, if no block is given, `args[0]` is an operation symbol.
+- Need to dynamically apply either the block or the operation symbol to the elements. When a block is given, use it to determine how many elements are combined. When an operation symbol is given and no block is present, need to apply this operation to the elements (not currently implemented)
+- The setup for `initial_value` doesn't accommodate starting the iteration with the second element if no initial value is provided. Logic is needed to adjust both the `initial_value` and the starting index of the loop based on whether an initial value is actually passed in.
+
+# `my_inject` Implementation Restart
+I just wasn't getting it so I took a step back to really try and understand what's going on.
+
+**How does the `inject` method work? (again)**
+
+Ruby's #inject method takes an enumerable collection and accumulates each element into a single value using a block. It can be used in two main ways:
+
+1. With an initial value: `inject(initial_value) {|accumulator, element| block }`
+1. Without an initial value: `inject {|accumulator, element| block }`
+
+- `accumulator` is the accumulated value carried over from each step of the iteration.
+- `element` is the current element in the collection.
+
+If no initial value is given, Ruby uses the first element of the collection as the initial value and starts the iteration with the second element.
+
+**Example Usage of `#inject`**
+
+Here’s a quick example of using `#inject` to sum an array of numbers:
+```rb
+[1, 2, 3, 4].inject(0) { |sum, number| sum + number }  #=> 10
+```
+
+And without an explicit initial value:
+```rb
+[1, 2, 3, 4].inject { |sum, number| sum + number }  #=> 10
+```
+
+## Solution
+
+```rb
+ def my_inject(accumulator = nil, &block)
+    self.each do |element|
+      if accumulator.nil?
+        accumulator = element
+      else
+        accumulator = block.call(accumulator, element)
+      end
+    end
+    accumulator
+  end
+```
+
+### The Method Signature
+
+```ruby
+def my_inject(accumulator = nil, &block)
+```
+
+- **`accumulator`**: This parameter is set to `nil` by default. It serves as the initial value for the accumulation process. If `my_inject` is called without an initial value, `accumulator` starts as `nil`, which signals your method to use the first collection element as the starting value.
+- **`&block`**: This captures the block passed to `my_inject`. The block defines how each element of the collection will be combined into a single accumulated value.
+
+### The Iteration
+
+```ruby
+self.each do |element|
+```
+
+- **`self.each`**: Since we're inside a module that's meant to be included in Enumerable classes, `self` refers to the instance of the collection you're iterating over (e.g., an array). `each` then iterates over each element in this collection.
+
+### Accumulation Logic
+
+```ruby
+if accumulator.nil?
+  accumulator = element
+else
+  accumulator = block.call(accumulator, element)
+end
+```
+
+- **First iteration check (`accumulator.nil?`)**: During the first iteration, if `accumulator` is `nil`, it means no initial value was provided to `my_inject`. Thus, you set `accumulator` to the current element (`element`). This makes the first element of the collection the starting point for accumulation.
+  
+- **Subsequent iterations**: If `accumulator` is not `nil`, it means you're either on the second (or later) iteration with no initial value provided, or you're on the first iteration with an initial value provided. Here, you call the block with the current `accumulator` and `element` as arguments. The block's return value becomes the new `accumulator`.
+
+This block execution step is where the "injection" happens. The block defines how to combine the accumulated value with the current element, whether that's adding numbers, concatenating strings, or some other operation.
+
+### Returning the Accumulated Value
+
+```ruby
+accumulator
+```
+
+After iterating through the entire collection, the method returns the final accumulated value.
+
+### Why It Works
+
+Your method effectively abstracts the pattern of iterating over a collection and accumulating a value. By handling the initial value flexibly (either using the one provided or defaulting to the first collection element) and allowing any combination logic through the block, it captures the essence of what `inject`/`reduce` methods do in functional programming paradigms.
