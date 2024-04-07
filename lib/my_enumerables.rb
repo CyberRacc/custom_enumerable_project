@@ -111,11 +111,15 @@ module Enumerable
     transformed_array
   end
 
-  # Inject is the same as reduce, it will reduce elements down to a single value.
-  def my_inject
-    initial_value = 0
-    i = 0
-    yield(self[i]) while i < size
+  def my_inject(accumulator = nil, &block)
+    self.each do |element|
+      if accumulator.nil?
+        accumulator = element
+      else
+        accumulator = block.call(accumulator, element)
+      end
+    end
+    accumulator
   end
 end
 
